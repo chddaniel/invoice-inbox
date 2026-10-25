@@ -1,0 +1,23 @@
+{
+  "name": "invoice-inbox",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "description": "Forward your invoices to an email address. It files them for your accountant and pays suppliers in Airwallex when you reply YES.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:demo": "wrangler deploy -c wrangler.demo.jsonc",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "postal-mime": "^2.4.4"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20261019.1",
+    "@types/node": "^26.6.5",
+    "typescript": "^5.9.2",
+    "wrangler": "^4.152.0"
+  }
+}

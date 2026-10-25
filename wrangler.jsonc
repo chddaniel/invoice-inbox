@@ -1,0 +1,21 @@
+{
+  "name": "invoice-inbox",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "d1_databases": [{ "binding": "DB", "database_name": "invoice-inbox" }],
+  "kv_namespaces": [{ "binding": "FILES" }],
+  "send_email": [{ "name": "EMAIL" }],
+  // On the 1st of each month, send last month's pack to your accountant.
+  "triggers": { "crons": ["0 8 1 * *"] },
+  "vars": {
+    "OPENAI_MODEL": "gpt-4.1-mini",
+    // Starts on the Airwallex sandbox (test money). Set to "true" to allow a live account.
+    "ALLOW_PRODUCTION": "false",
+    "GITHUB_URL": "https://github.com/chddaniel/invoice-inbox"
+    // Optional: "ALLOWED_SENDERS": "you@yourcompany.com". Otherwise whoever forwards the first invoice owns the inbox.
+  },
+  "observability": { "enabled": true }
+  // Secret: OPENAI_API_KEY (see .dev.vars.example).
+}

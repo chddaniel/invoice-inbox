@@ -1,0 +1,3 @@
+# Your OpenAI API key, used to read invoices (a few cents a month).
+# Create one at https://platform.openai.com/api-keys
+OPENAI_API_KEY=
