@@ -4,7 +4,7 @@ Forward your invoices to an email address. That's it.
 
 - It reads every invoice and receipt you forward (PDF, photo, or the email itself) and files it by month: vendor, amount, date, category.
 - When a supplier invoice needs paying, it emails you: *"Northwind Studio wants €1,200. Reply YES to pay it."*
-- Just say yes, and the supplier is paid in Airwallex. Nothing is ever paid without your yes.
+- Just say yes, and the supplier is paid. Nothing is ever paid without your yes.
 - On the 1st of every month, your accountant gets last month's invoices and receipts, with a CSV.
 
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/chddaniel/invoice-inbox)

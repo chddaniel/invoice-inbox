@@ -18,7 +18,7 @@ a{color:inherit;text-decoration:none}
 .nav{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:20;display:flex;align-items:center;gap:6px;padding:6px 6px 6px 14px;border-radius:999px;background:rgba(20,20,22,.55);border:1px solid var(--glassline);backdrop-filter:blur(18px) saturate(1.4);-webkit-backdrop-filter:blur(18px) saturate(1.4);white-space:nowrap}
 .nav .links a{color:var(--t70);font-size:14px;padding:6px 10px}
 .nav .links a:hover{color:#fff}
-.logo{display:inline-flex;align-items:center;gap:8px;font:600 16px var(--display);letter-spacing:-.02em;margin-right:6px}
+.logo{display:inline-flex;align-items:center;gap:8px;font:600 16px var(--display);letter-spacing:-.02em;margin-right:40px}
 .mark{width:22px;height:22px;border-radius:7px;background:linear-gradient(160deg,#fff 0%,#dfe6f5 100%);display:grid;place-items:center;color:#09090a}
 .mark svg{width:13px;height:13px}
 
@@ -150,12 +150,12 @@ export function landing(env: Env): Response {
 <header class="hero"><div class="sky"></div>
   <span class="badge"><span class="dot"></span> Free and open source</span>
   <h1>Forward your invoices.<br>That's it.</h1>
-  <p class="sub">It files every invoice and receipt for your accountant. When a supplier needs paying, it asks you. Reply YES and it's paid in Airwallex.</p>
+  <p class="sub">It files every invoice and receipt for your accountant. When a supplier needs paying, it asks you. Reply YES and it's paid.</p>
   <div class="ctas">
     <a class="pill white lg" href="${esc(deployUrl(env))}">Deploy free →</a>
     <a class="pill glass lg" href="#how">See how it works</a>
   </div>
-  <p class="fine">Free and open source. One click puts your own copy on Cloudflare, then pick an address like invoices@yourcompany.com · <a href="${esc(env.GITHUB_URL)}">Code</a></p>
+  <p class="fine">100% free, open source · <a href="${esc(env.GITHUB_URL)}">Code</a></p>
   <div class="demo">
     <div class="glasscard">
       <div class="from">${MARK} Invoice Inbox · just now <span style="margin-left:auto" class="dot amber"></span></div>
