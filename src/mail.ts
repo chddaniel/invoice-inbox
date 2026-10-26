@@ -97,7 +97,8 @@ export function approvalMail(env: Env, user: User, doc: Doc, connected: boolean)
   const link = dash(env, user);
   const amount = money(doc.amount, doc.currency);
   const details = [doc.invoice_number ? `Invoice ${doc.invoice_number}` : '', doc.due_date ? `due ${niceDate(doc.due_date)}` : ''].filter(Boolean).join(' · ');
-  const yes = `mailto:pay-${doc.pay_token}@${env.MAIL_DOMAIN}?subject=${encodeURIComponent(reSubject(doc.subject))}&body=YES`;
+  const ref = `Ref PAY-${doc.pay_token}`;
+  const yes = `mailto:${env.INBOX}?subject=${encodeURIComponent(reSubject(doc.subject))}&body=${encodeURIComponent(`YES\n\n${ref}`)}`;
   const html = card({
     dot: 'amber',
     label: 'Needs your YES',
@@ -110,7 +111,8 @@ ${bank ? line(`Pays to ${esc(maskedAccount(bank))}`) : ''}
         ? `<div style="font-size:18px;font-weight:600;margin:0 0 14px">Reply YES to pay it.</div>${pill(yes, `Pay ${amount}`)}&nbsp;&nbsp;${pill(link, 'Open', false)}`
         : `<div style="font-size:15px;margin:0 0 14px">Connect your payment account once, then reply YES.</div>${pill(`${link}#airwallex`, 'Connect payments')}`
     }</div>
-<div style="font-size:13px;color:rgba(255,255,255,.55);margin-top:18px">Already filed for your accountant.</div>`,
+<div style="font-size:13px;color:rgba(255,255,255,.55);margin-top:18px">Already filed for your accountant.</div>
+<div style="font-size:11px;color:rgba(255,255,255,.35);margin-top:10px">${esc(ref)}</div>`,
     footer: 'Nothing is paid until you say YES.',
   });
   const text = `${doc.vendor || 'A supplier'} wants ${amount}
@@ -119,7 +121,9 @@ ${bank ? `Pays to ${maskedAccount(bank)}` : ''}
 
 ${connected ? 'Reply YES to pay it.' : `Connect your payment account at ${link}#airwallex, then reply YES.`}
 
-See everything: ${link}`;
+See everything: ${link}
+
+${ref}`;
   return { html, text };
 }
 

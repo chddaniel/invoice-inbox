@@ -1,4 +1,5 @@
 import type { Doc, Env, User } from './types';
+import { tokenUrl } from './emailsetup';
 import { esc, money, monthKey, monthName, niceDate } from './util';
 
 // Look and feel: near-black canvas, a soft dusk-sky glow,
@@ -111,6 +112,10 @@ input:focus,select:focus{border-color:rgba(255,255,255,.3)}
 .note{font-size:13px;color:var(--t55);margin:10px 0 0}
 .flash{display:flex;align-items:center;gap:10px;margin-top:22px;padding:12px 16px;border-radius:16px;background:rgba(63,207,110,.1);border:1px solid rgba(63,207,110,.25)}
 .flash.bad{background:rgba(255,107,94,.1);border-color:rgba(255,107,94,.3)}
+.drop{margin-top:28px;border:1.5px dashed rgba(255,255,255,.18);border-radius:22px;padding:26px 16px;text-align:center;background:rgba(255,255,255,.02);transition:background .15s,border-color .15s}
+.drop.over{background:rgba(76,141,255,.1);border-color:var(--blue)}
+.drop.busy{opacity:.7}
+.drop b{display:block;font:500 17px var(--display);margin-bottom:4px}
 @media (max-width:640px){.nav .links{display:none}.item{grid-template-columns:auto 1fr}.item .right{grid-column:1/-1;justify-content:flex-start}.pill.lg{min-width:0;width:100%}}
 `;
 
@@ -264,8 +269,21 @@ export function dashboard(env: Env, user: User, docs: Doc[], flash?: { text: str
 <header class="dash-hero"><div class="sky"></div><div class="wrap narrow">
   ${flash ? `<div class="flash${flash.bad ? ' bad' : ''}"><span class="dot${flash.bad ? ' red' : ''}"></span>${esc(flash.text)}</div>` : ''}
   <h1 style="margin-top:${flash ? 22 : 0}px">Your invoices</h1>
-  <button class="addr" data-copy="${esc(env.INBOX)}" style="color:#fff;cursor:pointer">${esc(env.INBOX)} <span class="pill white small">Copy</span></button>
-  <p class="note">Forward from ${esc(user.email)}. Tip: a Gmail filter can auto-forward anything with "invoice" or "receipt".</p>
+  ${
+    env.INBOX
+      ? `<button class="addr" data-copy="${esc(env.INBOX)}" style="color:#fff;cursor:pointer">${esc(env.INBOX)} <span class="pill white small">Copy</span></button>
+  <p class="note">Forward from ${esc(user.email)}. Tip: a Gmail filter can auto-forward anything with "invoice" or "receipt".</p>`
+      : `<form class="card" method="post" action="${base}/email-setup" style="background:rgba(17,17,19,.72)">
+    <p style="margin:0 0 4px;font:500 18px var(--display)"><span class="num" style="display:inline-grid;margin-right:8px">1</span>Get your invoice address</p>
+    <p class="note" style="margin:0 0 6px">Pick an address on your domain. We switch on email in Cloudflare for you.</p>
+    <div class="row">
+      <div><label for="address">Address</label><input id="address" name="address" type="email" placeholder="invoices@yourcompany.com" required></div>
+      <div><label for="cf_token">Cloudflare key · <a href="${esc(tokenUrl())}" target="_blank" style="text-decoration:underline">create one</a> (pre-filled, press Continue, then Create)</label><input id="cf_token" name="cf_token" type="password" autocomplete="off" required></div>
+      <div style="flex:0 0 auto"><button class="pill white">Set up</button></div>
+    </div>
+    <p class="note">The key is only used once and isn't saved.</p>
+  </form>`
+  }
   <div class="stats">
     <div class="stat"><div class="n">${esc(spent)}</div><div class="l"><span class="dot blue"></span>spent this month</div></div>
     <div class="stat"><div class="n">${inMonth.length}</div><div class="l"><span class="dot grey"></span>filed this month</div></div>
@@ -274,7 +292,12 @@ export function dashboard(env: Env, user: User, docs: Doc[], flash?: { text: str
   </div>
 </div></header>
 <main class="wrap narrow">
-${list || `<div class="list" style="margin-top:20px"><div class="empty">Nothing yet. Forward your first invoice to ${esc(env.INBOX)}</div></div>`}
+<form class="drop" id="drop" method="post" action="${base}/upload" enctype="multipart/form-data">
+  <input id="files" name="files" type="file" multiple accept="application/pdf,image/*" hidden>
+  <b>Drop invoices here</b> <span class="sub2">or <label for="files" style="display:inline;margin:0;color:#fff;text-decoration:underline;cursor:pointer">pick files</label> · PDFs and photos</span>
+</form>
+<script>(()=>{const d=document.getElementById('drop'),f=document.getElementById('files');const go=()=>{d.classList.add('busy');d.querySelector('b').textContent='Reading…';d.submit()};f.onchange=()=>f.files.length&&go();['dragenter','dragover'].forEach(e=>d.addEventListener(e,x=>{x.preventDefault();d.classList.add('over')}));['dragleave','drop'].forEach(e=>d.addEventListener(e,x=>{x.preventDefault();d.classList.remove('over')}));d.addEventListener('drop',x=>{if(!x.dataTransfer.files.length)return;f.files=x.dataTransfer.files;go()})})()</script>
+${list || `<div class="list" style="margin-top:20px"><div class="empty">Nothing yet. ${env.INBOX ? `Forward your first invoice to ${esc(env.INBOX)}, or drop one above.` : 'Drop your first invoice above.'}</div></div>`}
 <h2 class="sec">Accountant</h2>
 <form class="card" method="post" action="${base}/settings">
   <input type="hidden" name="section" value="accountant">
@@ -295,6 +318,23 @@ ${list || `<div class="list" style="margin-top:20px"><div class="empty">Nothing 
 </form>
 </main>
 <footer>Keep this link private, it's your login · <a href="${esc(env.GITHUB_URL)}">Open source</a></footer>`,
+  );
+}
+
+export function startPage(env: Env, error?: string): Response {
+  return page(
+    'Set up · Invoice Inbox',
+    `${nav(env)}
+<header class="hero" style="min-height:86vh"><div class="sky"></div>
+  <span class="badge"><span class="dot"></span> Deployed</span>
+  <h1>Your Invoice Inbox<br>is live.</h1>
+  <p class="sub">Enter your email to open your dashboard. You'll be the owner, and nobody else can use it.</p>
+  <form method="post" action="/start" class="ctas" style="align-items:center">
+    <input name="email" type="email" required placeholder="you@yourcompany.com" style="max-width:300px;border-radius:999px;padding:14px 20px;background:rgba(9,9,10,.5);border-color:var(--glassline)">
+    <button class="pill white lg" style="min-width:0">Open my dashboard →</button>
+  </form>
+  ${error ? `<p class="fine" style="color:#ffb4ab">${esc(error)}</p>` : '<p class="fine">Bookmark the dashboard link. It is your login.</p>'}
+</header>`,
   );
 }
 

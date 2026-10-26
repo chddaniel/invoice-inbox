@@ -158,6 +158,43 @@ function documentsIn(mail: Parsed): { source: Source; file: { name: string; type
   ];
 }
 
+/** Read one document, store the original, and file it. Used by email and by dashboard uploads. */
+export async function fileOne(
+  env: Env,
+  user: User,
+  f: { source: Source; file: { name: string; type: string; bytes: ArrayBuffer | string } },
+  context: string,
+  subject: string,
+  threadId: string | null,
+): Promise<Doc> {
+  const x = await extract(env, f.source, context);
+  const key = `f/${user.id}/${crypto.randomUUID()}`;
+  await env.FILES.put(key, f.file.bytes, { metadata: { type: f.file.type, name: f.file.name } });
+  const doc = toDoc(user, x, { key, name: f.file.name, type: f.file.type }, subject, threadId);
+  await saveDoc(env, doc);
+  return doc;
+}
+
+/**
+ * Which bill a reply is answering. Payment emails carry "Ref PAY-<token>", which comes back in the
+ * quoted text of a reply. If the reference is missing but only one bill is waiting, it's that one.
+ */
+export async function approvalToken(env: Env, from: string, to: string, mail: Parsed): Promise<string | null> {
+  const legacy = to.match(/^pay-([a-z0-9]+)@/);
+  if (legacy) return legacy[1];
+  const ref = mail.text.match(/PAY-([a-z0-9]{20})/i);
+  if (ref) return ref[1].toLowerCase();
+  if (mail.attachments.length) return null;
+  const head = replyHead(mail.text).toLowerCase();
+  if (!/^\s*(yes|y|yep|yeah|ok|okay|pay|approve|approved|no|nope|skip|cancel)\b/.test(head) || head.length > 200) return null;
+  const waiting = await env.DB.prepare(
+    "SELECT d.pay_token FROM docs d JOIN users u ON u.id = d.user_id WHERE u.email = ? AND d.status IN ('awaiting_approval', 'failed') AND d.pay_token IS NOT NULL",
+  )
+    .bind(from)
+    .all<{ pay_token: string }>();
+  return waiting.results.length === 1 ? waiting.results[0].pay_token : null;
+}
+
 export async function handleInbound(env: Env, from: string, mail: Parsed) {
   const { user, isNew } = await getOrCreateUser(env, from);
   const replyBase = { to: user.email, subject: reSubject(mail.subject), inReplyTo: mail.messageId };
@@ -186,12 +223,7 @@ export async function handleInbound(env: Env, from: string, mail: Parsed) {
   const docs: Doc[] = [];
   for (const f of found) {
     try {
-      const x = await extract(env, f.source, context);
-      const key = `f/${user.id}/${crypto.randomUUID()}`;
-      await env.FILES.put(key, f.file.bytes, { metadata: { type: f.file.type, name: f.file.name } });
-      const doc = toDoc(user, x, { key, name: f.file.name, type: f.file.type }, mail.subject, mail.messageId);
-      await saveDoc(env, doc);
-      docs.push(doc);
+      docs.push(await fileOne(env, user, f, context, mail.subject, mail.messageId));
     } catch (e: any) {
       console.error('extract failed', e?.message);
     }
@@ -208,7 +240,7 @@ export async function handleInbound(env: Env, from: string, mail: Parsed) {
   for (const bill of bills) {
     await send(env, {
       ...replyBase,
-      replyTo: `pay-${bill.pay_token}@${env.MAIL_DOMAIN}`,
+      replyTo: env.INBOX,
       ...approvalMail(env, user, bill, connected),
     });
   }
@@ -257,7 +289,7 @@ export async function handleApproval(env: Env, from: string, payToken: string, m
     return;
   }
   if (!/^\s*(yes|y|yep|yeah|ok|okay|pay|go|approve|approved|do it|👍|✅)/.test(answer)) {
-    await send(env, { ...reply, replyTo: `pay-${doc.pay_token}@${env.MAIL_DOMAIN}`, ...plainMail(env, user, ['Reply YES to pay it, or NO to skip.']) });
+    await send(env, { ...reply, replyTo: env.INBOX, ...plainMail(env, user, ['Reply YES to pay it, or NO to skip.', `Ref PAY-${doc.pay_token}`]) });
     return;
   }
   if (doc.status === 'paid') {
@@ -269,7 +301,7 @@ export async function handleApproval(env: Env, from: string, payToken: string, m
   if (r.ok) {
     await send(env, { ...reply, ...paidMail(env, user, doc, r.payerPays) });
   } else {
-    await send(env, { ...reply, replyTo: `pay-${doc.pay_token}@${env.MAIL_DOMAIN}`, ...plainMail(env, user, [`Couldn't pay ${doc.vendor ?? 'it'}: ${r.error}`, 'Fix it on your dashboard, then reply YES again.']) });
+    await send(env, { ...reply, replyTo: env.INBOX, ...plainMail(env, user, [`Couldn't pay ${doc.vendor ?? 'it'}: ${r.error}`, `Ref PAY-${doc.pay_token}`, 'Fix it on your dashboard, then reply YES again.']) });
   }
 }
 

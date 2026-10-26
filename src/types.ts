@@ -8,6 +8,7 @@ export interface Env {
   OPENAI_MODEL: string;
   ALLOW_PRODUCTION: string;
   ALLOWED_SENDERS?: string;
+  WORKER_NAME?: string;
   GITHUB_URL: string;
   OPENAI_API_KEY: string;
   ENC_KEY: string;
